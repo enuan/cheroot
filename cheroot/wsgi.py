@@ -279,7 +279,8 @@ class Gateway_10(Gateway):
         if isinstance(req.server.bind_addr, six.string_types):
             # AF_UNIX. This isn't really allowed by WSGI, which doesn't
             # address unix domain sockets. But it's better than nothing.
-            env['SERVER_PORT'] = ''
+            env['SERVER_PORT'] = '80'
+            env['REMOTE_ADDR'] = '0.0.0.0'
             try:
                 env['X_REMOTE_PID'] = str(req_conn.peer_pid)
                 env['X_REMOTE_UID'] = str(req_conn.peer_uid)

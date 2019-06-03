@@ -1342,6 +1342,24 @@ class HTTPConnection:
         self.rfile.close()
 
         if not self.linger:
+            try:
+                # explicitly shutdown. socket.close() merely releases
+                # the socket and waits for GC to perform the actual close.
+                # Calling shutdown() would force TCP to terminate the
+                # underlying connection and send a FIN / EOF to the peer
+                # regardless of how many processes have handles to the socket.
+                # However, it does not deallocate the socket and you still need
+                # to call close afterward.
+                # For normal close(), the TCP termination only
+                # occurs when the last remaining copy of the socket is closed.
+                # Multiple processes can have a handle for the same underlying
+                # socket, when you call close it decrements the handle count by
+                # one, if the handle count does not reach zero because another
+                # process still has a handle to the socket then the connection
+                # is not closed and the socket is not deallocated.
+                self.socket._sock.shutdown(socket.SHUT_WR)
+            except socket.error:
+                pass #some platforms may raise ENOTCONN here
             self._close_kernel_socket()
             self.socket.close()
         else:
@@ -1862,6 +1880,9 @@ class HTTPServer:
             File does not exist, which is the primary goal anyway.
             """
 
+        try: os.makedirs(os.path.dirname(self.bind_addr))
+        except: pass
+
         sock = self.prepare_socket(
             bind_addr=bind_addr,
             family=socket.AF_UNIX, type=socket.SOCK_STREAM, proto=0,
@@ -1883,6 +1904,8 @@ class HTTPServer:
             raise
 
         bind_addr = self.resolve_real_bind_addr(sock)
+
+        os.chmod(self.bind_addr, 0777)  # Change permission so that nginx can access the socket
 
         try:
             """FreeBSD/macOS pre-populating fs mode permissions."""
