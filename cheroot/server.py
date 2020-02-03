@@ -207,7 +207,7 @@ class HeaderReader:
             if not line.endswith(CRLF):
                 raise ValueError('HTTP requires CRLF terminators')
 
-            if line[0] in (SPACE, TAB):
+            if line[0:1] in (SPACE, TAB):
                 # It's a continuation line.
                 v = line.strip()
             else:
@@ -1357,7 +1357,7 @@ class HTTPConnection:
                 # one, if the handle count does not reach zero because another
                 # process still has a handle to the socket then the connection
                 # is not closed and the socket is not deallocated.
-                self.socket._sock.shutdown(socket.SHUT_WR)
+                self.socket.shutdown(socket.SHUT_WR)
             except socket.error:
                 pass #some platforms may raise ENOTCONN here
             self._close_kernel_socket()
@@ -1905,7 +1905,7 @@ class HTTPServer:
 
         bind_addr = self.resolve_real_bind_addr(sock)
 
-        os.chmod(self.bind_addr, 0777)  # Change permission so that nginx can access the socket
+        os.chmod(self.bind_addr, 0o0777)  # Change permission so that nginx can access the socket
 
         try:
             """FreeBSD/macOS pre-populating fs mode permissions."""
