@@ -2065,6 +2065,18 @@ class HTTPServer:
 
         bind_addr = self.resolve_real_bind_addr(sock)
 
+        # Force the requested fs permissions on the socket path. The
+        # pre-bind ``fchmod`` above operates on the socket fd before the
+        # filesystem entry exists (created by ``bind()``), so on Linux it
+        # has no effect on the on-disk inode and the file ends up with the
+        # umask default (typically 755). Chmod the path explicitly here so
+        # that other users/groups (e.g. nginx) can access the socket.
+        try:
+            os.chmod(bind_addr, fs_permissions)
+            FS_PERMS_SET = True
+        except OSError:
+            pass
+
         try:
             """FreeBSD/macOS pre-populating fs mode permissions."""
             if not FS_PERMS_SET:
