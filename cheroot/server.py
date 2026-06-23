@@ -2031,6 +2031,14 @@ class HTTPServer:
             ):
                 raise
 
+        # Ensure the parent directory of the socket path exists so that
+        # bind() doesn't fail when the directory is absent (e.g. when
+        # serving through a fresh /run/app.sock path).
+        try:
+            os.makedirs(os.path.dirname(self.bind_addr))
+        except (OSError, ValueError):
+            pass
+
         sock = self.prepare_socket(
             bind_addr=bind_addr,
             family=socket.AF_UNIX,
